@@ -527,7 +527,7 @@
     render();
   });
 
-  $("btnReset").addEventListener("click", ()=>{ if(confirm("¿Borrar todos los registros de oficina?")){ records=[]; saveRecords(); render(); } });
+  $("btnReset").addEventListener("click", ()=>{ if(confirm("¿Borrar todos los registros de oficina? (también se cancela cualquier entrada marcada sin cerrar)")){ records=[]; pendiente=null; saveRecords(); savePendiente(); render(); } });
 
   $("btnAddExt").addEventListener("click", ()=>{
     const fecha=$("extFecha").value, desc=$("extDesc").value.trim();
