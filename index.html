@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Horas — Tardanzas y Extras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EDE6D6; --card:#FBF8F0; --ink:#1C2541; --ink-soft:#5B6178;
+    --brass:#B8863B; --brass-dim:#DCC79A;
+    --rojo:#A63A3A; --rojo-bg:#F3E1DF;
+    --verde:#3F7A5C; --verde-bg:#E1EDE5;
+    --azul:#3B6E91; --azul-bg:#DFEAF0;
+    --morado:#2E6DA4; --morado-bg:#DCE9F5;
+    --oro:#7A2E3B; --oro-bg:#EEDCE0;
+    --line:#DCD3BE; --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper);
+    background-image: repeating-linear-gradient(0deg, rgba(28,37,65,0.025) 0px, rgba(28,37,65,0.025) 1px, transparent 1px, transparent 28px);
+    color:var(--ink); font-family:'Inter',sans-serif; padding:32px 20px 80px;
+  }
+  .wrap{max-width:880px;margin:0 auto;}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass);font-weight:700;margin-bottom:6px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;margin:0 0 4px;letter-spacing:-.01em;}
+  .sub{color:var(--ink-soft);font-size:14px;margin-bottom:28px;}
+
+  .balance{
+    background:var(--ink); color:var(--paper); border-radius:var(--radius); padding:26px 28px;
+    display:flex; flex-wrap:wrap; gap:24px; justify-content:space-between; align-items:flex-end;
+    margin-bottom:20px; position:relative; overflow:hidden;
+  }
+  .balance::before{content:"";position:absolute;inset:0;background:linear-gradient(115deg, rgba(184,134,59,.18), transparent 45%);pointer-events:none;}
+  .balance-main .label{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass-dim);margin-bottom:8px;}
+  .balance-main .amount{font-family:'JetBrains Mono',monospace;font-size:44px;font-weight:700;line-height:1;}
+  .balance-main .amount .cur{font-size:22px;font-weight:500;opacity:.75;margin-right:4px;}
+  .balance-main .note{margin-top:8px;font-size:13px;color:#C9CDDB;max-width:360px;}
+  .balance-stats{display:flex;gap:22px;flex-wrap:wrap;}
+  .bstat{font-family:'JetBrains Mono',monospace;}
+  .bstat .k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#9BA0B5;margin-bottom:4px;}
+  .bstat .v{font-size:19px;font-weight:700;}
+  .bstat .sv{font-size:10px;color:#9BA0B5;font-weight:400;margin-top:2px;}
+  .bstat.rojo .v{color:#E39A9A;} .bstat.verde .v{color:#9BD4B4;} .bstat.oro .v{color:#E3A3B0;}
+
+  .comp-bar-wrap{margin-top:20px;position:relative;z-index:1;}
+  .comp-bar-labels{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#9BA0B5;margin-bottom:6px;}
+  .comp-bar{height:10px;border-radius:6px;background:#2A3355;overflow:hidden;display:flex;}
+  .comp-bar .seg-comp{background:var(--brass);} .comp-bar .seg-extra{background:#4E9E75;} .comp-bar .seg-pend{background:#B85555;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;margin-bottom:20px;}
+  .card h2{font-family:'Space Grotesk',sans-serif;font-size:16px;margin:0 0 4px;display:flex;align-items:center;gap:8px;}
+  .card h3{font-family:'Space Grotesk',sans-serif;font-size:13.5px;margin:22px 0 4px;color:var(--ink);}
+  .card .card-desc{font-size:12.5px;color:var(--ink-soft);margin:0 0 16px;}
+  .card h2 .n{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--brass);border:1px solid var(--brass-dim);border-radius:4px;padding:2px 6px;}
+  .divider{border:none;border-top:1px dashed var(--line);margin:18px 0 0;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;}
+  label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:5px;font-weight:500;}
+  input[type=date], input[type=text]{
+    width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;
+    font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--ink);
+  }
+  input[type=text]{font-family:'Inter',sans-serif;font-size:13.5px;}
+  input:focus, select:focus{outline:2px solid var(--brass);outline-offset:1px;}
+
+  .time-type{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:4px 8px;}
+  .time-type input[type=number]{
+    width:40px;border:none;background:transparent;font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;
+    color:var(--ink);padding:6px 2px;text-align:center;-moz-appearance:textfield;
+  }
+  .time-type input[type=number]::-webkit-outer-spin-button, .time-type input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .time-type input:focus{outline:none;}
+  .time-type .colon{color:var(--ink-soft);font-family:'JetBrains Mono',monospace;font-weight:700;}
+  .time-type select{border:none;background:transparent;font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:700;color:var(--brass);padding:6px 2px;cursor:pointer;}
+  .time-type select:focus{outline:none;}
+
+  .row-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  button{font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;transition:transform .08s ease, opacity .15s ease;}
+  button:active{transform:scale(.97);}
+  .btn-primary{background:var(--ink);color:var(--paper);} .btn-primary:hover{opacity:.9;}
+  .btn-oro{background:var(--oro);color:#fff;} .btn-oro:hover{opacity:.9;}
+  .btn-morado{background:var(--morado);color:#fff;} .btn-morado:hover{opacity:.9;}
+  .sub-block{border-radius:10px;padding:16px;}
+  .sub-block.oro{background:var(--oro-bg);border:1px solid #D9B7BE;}
+  .sub-block.morado{background:var(--morado-bg);border:1px solid #B4CFE6;margin-top:16px;}
+  .sub-block h3{margin-top:0 !important;}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink-soft);} .btn-ghost:hover{border-color:var(--brass);color:var(--ink);}
+  .btn-link{background:transparent;color:var(--brass);padding:6px 0;font-size:12.5px;text-decoration:underline;}
+  .btn-danger{background:transparent;color:var(--rojo);padding:6px 10px;font-size:12px;} .btn-danger:hover{background:var(--rojo-bg);}
+
+  .fixed-schedule{
+    display:flex;gap:22px;flex-wrap:wrap;align-items:center;
+    font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--ink);
+    background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px;
+  }
+  .fixed-schedule .fs-item .fs-k{font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:3px;}
+
+  .pending-banner{
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;
+    background:var(--verde-bg);border:1px solid #BFDBC9;border-radius:10px;padding:12px 14px;margin-bottom:16px;
+  }
+  .pending-banner .txt{font-size:13px;color:var(--verde);font-weight:600;}
+  .pending-banner .txt b{font-family:'JetBrains Mono',monospace;}
+
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .chip{background:#fff;border:1px solid var(--line);color:var(--ink-soft);font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:999px;}
+  .chip:hover{border-color:var(--brass);color:var(--ink);}
+  .chip.active{background:var(--ink);border-color:var(--ink);color:var(--paper);}
+  .chip.sort-toggle{margin-left:auto;background:transparent;border:1px solid transparent;color:var(--brass);}
+  .chip.sort-toggle:hover{border-color:var(--brass-dim);}
+
+  .records{display:flex;flex-direction:column;gap:10px;}
+  .rec{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff;}
+  .rec-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+  .rec-date{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13.5px;}
+  .rec-times{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink-soft);}
+  .rec-desc{font-size:12.5px;color:var(--ink-soft);margin-top:3px;}
+  .rec-badges{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .badge{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap;}
+  .badge.rojo{background:var(--rojo-bg);color:var(--rojo);} .badge.verde{background:var(--verde-bg);color:var(--verde);}
+  .badge.azul{background:var(--azul-bg);color:var(--azul);} .badge.oro{background:var(--oro-bg);color:var(--oro);}
+  .badge.morado{background:var(--morado-bg);color:var(--morado);}
+  .badge.neutro{background:#EFEAE0;color:var(--ink-soft);}
+
+  .mini-scale{display:flex;align-items:center;height:16px;margin-top:9px;gap:2px;}
+  .mini-scale .side{flex:1;height:100%;display:flex;} .mini-scale .left{justify-content:flex-end;}
+  .mini-scale .fill-rojo{background:var(--rojo);border-radius:3px 0 0 3px;} .mini-scale .fill-verde{background:var(--verde);border-radius:0 3px 3px 0;}
+  .mini-scale .mid{width:2px;height:20px;background:var(--ink);opacity:.15;border-radius:2px;}
+
+  .empty{text-align:center;padding:30px 10px;color:var(--ink-soft);font-size:13.5px;}
+  footer{text-align:center;font-size:11.5px;color:var(--ink-soft);margin-top:26px;font-family:'JetBrains Mono',monospace;}
+  @media (max-width:520px){ .balance{padding:20px;} .balance-main .amount{font-size:34px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Parte diario · Compensación de horas</div>
+  <h1>Control de Horas</h1>
+  <div class="sub">Marca tu entrada en la mañana y tu salida en la tarde — la app recuerda tu hora de entrada aunque cierres la página.</div>
+
+  <div class="balance">
+    <div class="balance-main">
+      <div class="label">Saldo a favor</div>
+      <div class="amount"><span class="cur">S/</span><span id="soles">0.00</span></div>
+      <div class="note" id="balanceNote">Sin registros todavía.</div>
+    </div>
+    <div class="balance-stats">
+      <div class="bstat rojo"><div class="k">Tardanza total</div><div class="v" id="statTardanza">0h 00m</div></div>
+      <div class="bstat verde"><div class="k">Extra total</div><div class="v" id="statExtra">0h 00m</div><div class="sv" id="statExtraDesglose"></div></div>
+      <div class="bstat"><div class="k">Pendiente</div><div class="v" id="statPendiente">0h 00m</div></div>
+      <div class="bstat oro"><div class="k">Días de partido</div><div class="v" id="statPartidos">0 · S/0</div></div>
+    </div>
+    <div class="comp-bar-wrap" id="compBarWrap" style="width:100%;display:none;">
+      <div class="comp-bar-labels"><span>Compensado</span><span>Pagable</span><span>Tardanza pendiente</span></div>
+      <div class="comp-bar" id="compBar"></div>
+    </div>
+  </div>
+
+  <!-- FIXED SCHEDULE -->
+  <div class="card">
+    <h2><span class="n">01</span> Horario estándar</h2>
+    <p class="card-desc">Fijo, no editable.</p>
+    <div class="fixed-schedule">
+      <div class="fs-item"><div class="fs-k">Entrada</div>8:00 AM</div>
+      <div class="fs-item"><div class="fs-k">Salida</div>5:00 PM</div>
+    </div>
+  </div>
+
+  <!-- CHECK IN / CHECK OUT -->
+  <div class="card">
+    <h2><span class="n">02</span> Registrar día de oficina</h2>
+    <p class="card-desc" id="stepDesc">Marca tu entrada apenas llegues. Tu hora quedará guardada para que en la tarde solo marques la salida.</p>
+
+    <div id="pendingBanner" style="display:none;" class="pending-banner">
+      <div class="txt">Entrada guardada: <b id="pendingInfo"></b></div>
+      <button class="btn-ghost" id="btnCancelPending">Cancelar entrada</button>
+    </div>
+
+    <!-- STEP: marcar entrada -->
+    <div id="stepEntrada">
+      <div class="grid">
+        <div>
+          <label>Fecha</label>
+          <input type="date" id="recFecha">
+        </div>
+        <div>
+          <label>Hora de entrada</label>
+          <div class="time-type">
+            <input type="number" id="recEntradaH" min="1" max="12" value="8">
+            <span class="colon">:</span>
+            <input type="number" id="recEntradaM" min="0" max="59" value="0">
+            <select id="recEntradaAP"><option value="AM" selected>AM</option><option value="PM">PM</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="row-actions"><button class="btn-primary" id="btnMarkEntrada">✓ Marcar entrada</button></div>
+    </div>
+
+    <!-- STEP: marcar salida -->
+    <div id="stepSalida" style="display:none;">
+      <div class="grid">
+        <div>
+          <label>Hora de salida</label>
+          <div class="time-type">
+            <input type="number" id="recSalidaH" min="1" max="12" value="5">
+            <span class="colon">:</span>
+            <input type="number" id="recSalidaM" min="0" max="59" value="0">
+            <select id="recSalidaAP"><option value="AM">AM</option><option value="PM" selected>PM</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="row-actions"><button class="btn-primary" id="btnMarkSalida">✓ Marcar salida y guardar día</button></div>
+    </div>
+
+    <button class="btn-link" id="toggleRetro" style="margin-top:14px;">+ Registrar otro día (fecha distinta, entrada y salida juntas)</button>
+    <div id="retroForm" style="display:none;margin-top:14px;">
+      <hr class="divider">
+      <div class="grid" style="margin-top:14px;">
+        <div>
+          <label>Fecha</label>
+          <input type="date" id="retroFecha">
+        </div>
+        <div>
+          <label>Entrada</label>
+          <div class="time-type">
+            <input type="number" id="retroEH" min="1" max="12" value="8">
+            <span class="colon">:</span><input type="number" id="retroEM" min="0" max="59" value="0">
+            <select id="retroEAP"><option value="AM" selected>AM</option><option value="PM">PM</option></select>
+          </div>
+        </div>
+        <div>
+          <label>Salida</label>
+          <div class="time-type">
+            <input type="number" id="retroSH" min="1" max="12" value="5">
+            <span class="colon">:</span><input type="number" id="retroSM" min="0" max="59" value="0">
+            <select id="retroSAP"><option value="AM">AM</option><option value="PM" selected>PM</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="row-actions"><button class="btn-primary" id="btnAddRetro">Guardar día completo</button></div>
+    </div>
+
+    <div class="row-actions"><button class="btn-ghost" id="btnReset">Borrar todos los registros de oficina</button></div>
+  </div>
+
+  <!-- MATCH DAY + HOME OVERTIME -->
+  <div class="card">
+    <h2><span class="n">03</span> Horas extra fuera de oficina</h2>
+
+    <div class="sub-block oro">
+    <h3>Día de partido — S/ 50 siempre</h3>
+    <div class="grid">
+      <div><label>Fecha</label><input type="date" id="extFecha"></div>
+      <div style="grid-column:span 2;"><label>¿Qué partido es?</label><input type="text" id="extDesc" placeholder="Ej: Chankas vs Alianza Lima — Liga 2, jornada 15"></div>
+    </div>
+    <div class="row-actions">
+      <button class="btn-oro" id="btnAddExt">Agregar día de partido</button>
+      <button class="btn-ghost" id="btnResetExt">Borrar días de partido</button>
+    </div>
+    <div class="records" id="extList" style="margin-top:16px;"></div>
+    </div>
+
+    <div class="sub-block morado">
+    <h3 style="color:var(--morado);">Horas extra de casa — S/ 10 por hora</h3>
+    <div class="grid">
+      <div><label>Fecha</label><input type="date" id="casaFecha"></div>
+      <div>
+        <label>Duración</label>
+        <div class="time-type">
+          <input type="number" id="casaHoras" min="0" max="12" value="0">
+          <span class="colon">h</span>
+          <input type="number" id="casaMin" min="0" max="59" value="0">
+          <span class="colon">m</span>
+        </div>
+      </div>
+      <div><label>Descripción</label><input type="text" id="casaDesc" placeholder="Ej: diseño de piezas para redes"></div>
+    </div>
+    <div class="row-actions">
+      <button class="btn-morado" id="btnAddCasa">Agregar hora extra de casa</button>
+      <button class="btn-ghost" id="btnResetCasa">Borrar horas de casa</button>
+    </div>
+    <div class="records" id="casaList" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <!-- RECORDS LIST -->
+  <div class="card">
+    <h2><span class="n">04</span> Registros de oficina <span id="recCount" style="font-family:'JetBrains Mono',monospace;font-weight:400;color:var(--ink-soft);font-size:12px;"></span></h2>
+    <div class="filters" id="filterChips">
+      <button class="chip active" data-filter="todos">Todos</button>
+      <button class="chip" data-filter="extra">Con extra</button>
+      <button class="chip" data-filter="tardanza">Con tardanza</button>
+      <button class="chip" data-filter="puntual">Puntual</button>
+      <button class="chip sort-toggle" id="btnSort">↓ Recientes primero</button>
+    </div>
+    <div class="records" id="recordsList">
+      <div class="empty">Aún no agregaste ningún día.</div>
+    </div>
+  </div>
+
+  <footer id="footerNote">Cargando datos guardados…</footer>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  let records = [];      // {id, fecha, entrada(min24h), salida(min24h)}
+  let partidos = [];     // {id, fecha, desc}  -> S/50 c/u siempre
+  let casa = [];          // {id, fecha, desc, horas, minutos} -> S/10/h, entra al pool de compensación
+  let pendiente = null;   // {fecha, entrada(min24h)} entrada marcada sin salida aún
+  let filterMode = "todos";
+  let sortDesc = true;
+
+  const SCHEDULE_IN = 8*60, SCHEDULE_OUT = 17*60;
+  const PRECIO_PARTIDO = 50;
+
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function clampInt(val,min,max,fallback){ let n=parseInt(val,10); if(isNaN(n)) return fallback; return Math.min(max,Math.max(min,n)); }
+  function to24(hour12,minute,ampm){ let h=hour12%12; if(ampm==="PM") h+=12; return h*60+minute; }
+  function to12Label(totalMin){
+    let h=Math.floor(totalMin/60), m=totalMin%60;
+    const ampm = h>=12 ? "PM":"AM"; let h12=h%12; if(h12===0) h12=12;
+    return h12+":"+pad(m)+" "+ampm;
+  }
+  function fmtHM(min){ min=Math.round(min); const h=Math.floor(min/60), m=min%60; return h+"h "+pad(m)+"m"; }
+  function fmtDate(iso){ if(!iso) return ""; const d=new Date(iso+"T00:00:00"); return d.toLocaleDateString("es-PE",{weekday:"short",day:"2-digit",month:"short"}); }
+
+  function tierInfo(remainder){
+    if(remainder<15) return {min:0, soles:0};
+    if(remainder<=23) return {min:20, soles:2.5};
+    if(remainder<=39) return {min:30, soles:5};
+    if(remainder<=49) return {min:45, soles:7.5};
+    return {min:60, soles:10};
+  }
+  function expand(rawMin){
+    if(rawMin<=0) return {minutos:0, soles:0};
+    const hours=Math.floor(rawMin/60), rem=rawMin-hours*60, t=tierInfo(rem);
+    return { minutos: hours*60+t.min, soles: hours*10+t.soles };
+  }
+  function computeRecord(r){
+    const rawT=Math.max(0, r.entrada-SCHEDULE_IN), rawE=Math.max(0, r.salida-SCHEDULE_OUT);
+    return { tardanza: expand(rawT).minutos, extra: expand(rawE).minutos, rawTardanza:rawT, rawExtra:rawE };
+  }
+
+  function render(){
+    let totalTardanza=0, totalExtraOficina=0;
+    const computed = records.map(r=>{ const c=computeRecord(r); totalTardanza+=c.tardanza; totalExtraOficina+=c.extra; return {...r,...c}; });
+
+    let totalExtraCasa = 0;
+    casa.forEach(c=>{ totalExtraCasa += Number(c.horas)*60+Number(c.minutos); });
+
+    const totalExtra = totalExtraOficina + totalExtraCasa;
+    const compensado = Math.min(totalTardanza, totalExtra);
+    const pendienteMin = Math.max(0, totalTardanza-totalExtra);
+    const pagableMinRaw = Math.max(0, totalExtra-totalTardanza);
+    const pago = expand(pagableMinRaw);
+    const sueltosMin = pagableMinRaw - pago.minutos;
+
+    const pagoPartidos = partidos.length * PRECIO_PARTIDO;
+    const totalSoles = pago.soles + pagoPartidos;
+
+    $("soles").textContent = totalSoles.toFixed(2);
+    $("statTardanza").textContent = fmtHM(totalTardanza);
+    $("statExtra").textContent = fmtHM(totalExtra);
+    $("statExtraDesglose").textContent = `oficina ${fmtHM(totalExtraOficina)} + casa ${fmtHM(totalExtraCasa)}`;
+    $("statPendiente").textContent = fmtHM(pendienteMin);
+    $("statPartidos").textContent = `${partidos.length} · S/${pagoPartidos}`;
+
+    const note = $("balanceNote");
+    let resumen = `Total extra: ${fmtHM(totalExtra)} · Total tardanza: ${fmtHM(totalTardanza)} · Total en soles: S/${totalSoles.toFixed(2)}`;
+    let parts = [];
+    if(pendienteMin>0) parts.push("tienes "+fmtHM(pendienteMin)+" de tardanza sin compensar");
+    if(sueltosMin>0) parts.push(fmtHM(sueltosMin)+" sueltos sin pagar");
+    if(pagoPartidos>0) parts.push("S/"+pagoPartidos+" de "+partidos.length+" día(s) de partido");
+    note.textContent = (records.length||casa.length||partidos.length) ? (resumen + (parts.length ? " — "+parts.join(" · ")+"." : "")) : "Sin registros todavía.";
+
+    const total = totalTardanza+totalExtra;
+    const wrap=$("compBarWrap"), bar=$("compBar");
+    if(total>0){
+      wrap.style.display="block";
+      const pComp=compensado/total*100, pPag=pagableMinRaw/total*100, pPend=pendienteMin/total*100;
+      bar.innerHTML = (pComp>0?`<div class="seg-comp" style="width:${pComp}%"></div>`:"")+(pPag>0?`<div class="seg-extra" style="width:${pPag}%"></div>`:"")+(pPend>0?`<div class="seg-pend" style="width:${pPend}%"></div>`:"");
+    } else { wrap.style.display="none"; }
+
+    renderCheckState();
+    renderOffice(computed);
+    renderPartidos();
+    renderCasa();
+  }
+
+  function renderCheckState(){
+    if(pendiente){
+      $("pendingBanner").style.display="flex";
+      $("pendingInfo").textContent = fmtDate(pendiente.fecha)+" · "+to12Label(pendiente.entrada);
+      $("stepEntrada").style.display="none";
+      $("stepSalida").style.display="block";
+      $("stepDesc").textContent = "Ya marcaste tu entrada. Cuando te retires, marca tu salida.";
+    } else {
+      $("pendingBanner").style.display="none";
+      $("stepEntrada").style.display="block";
+      $("stepSalida").style.display="none";
+      $("stepDesc").textContent = "Marca tu entrada apenas llegues. Tu hora quedará guardada para que en la tarde solo marques la salida.";
+    }
+  }
+
+  function renderOffice(computed){
+    let sorted=[...computed].sort((a,b)=> sortDesc ? b.fecha.localeCompare(a.fecha) : a.fecha.localeCompare(b.fecha));
+    let filtered=sorted.filter(r=>{
+      if(filterMode==="extra") return r.extra>0;
+      if(filterMode==="tardanza") return r.tardanza>0;
+      if(filterMode==="puntual") return r.tardanza===0 && r.extra===0;
+      return true;
+    });
+    $("recCount").textContent = records.length ? (filtered.length===records.length?`(${records.length})`:`(${filtered.length} de ${records.length})`) : "";
+    $("btnSort").textContent = sortDesc ? "↓ Recientes primero" : "↑ Antiguos primero";
+    document.querySelectorAll("#filterChips .chip[data-filter]").forEach(c=>c.classList.toggle("active", c.getAttribute("data-filter")===filterMode));
+
+    const list=$("recordsList");
+    if(records.length===0){ list.innerHTML='<div class="empty">Aún no agregaste ningún día.</div>'; return; }
+    if(filtered.length===0){ list.innerHTML='<div class="empty">No hay registros que coincidan con este filtro.</div>'; return; }
+    const maxMin=Math.max(1, ...computed.map(c=>Math.max(c.tardanza,c.extra)));
+    list.innerHTML = filtered.map(r=>{
+      const leftPct=(r.tardanza/maxMin*100).toFixed(1), rightPct=(r.extra/maxMin*100).toFixed(1);
+      let badges="";
+      if(r.tardanza>0) badges+=`<span class="badge rojo">-${fmtHM(r.tardanza)}</span>`;
+      if(r.extra>0) badges+=`<span class="badge verde">+${fmtHM(r.extra)}</span>`;
+      if(r.tardanza===0 && r.extra===0) badges+=`<span class="badge neutro">Puntual</span>`;
+      return `<div class="rec"><div class="rec-top"><div><div class="rec-date">${fmtDate(r.fecha)}</div><div class="rec-times">${to12Label(r.entrada)} → ${to12Label(r.salida)}</div></div><div class="rec-badges">${badges}<button class="btn-danger" data-del="${r.id}">Eliminar</button></div></div><div class="mini-scale"><div class="side left"><div class="fill-rojo" style="width:${leftPct}%"></div></div><div class="mid"></div><div class="side right"><div class="fill-verde" style="width:${rightPct}%"></div></div></div></div>`;
+    }).join("");
+    list.querySelectorAll("[data-del]").forEach(btn=>btn.addEventListener("click",()=>{ records=records.filter(r=>r.id!==btn.getAttribute("data-del")); saveRecords(); render(); }));
+  }
+
+  function renderPartidos(){
+    const list=$("extList");
+    if(partidos.length===0){ list.innerHTML='<div class="empty">Sin días de partido registrados.</div>'; return; }
+    const sorted=[...partidos].sort((a,b)=> b.fecha.localeCompare(a.fecha));
+    list.innerHTML = sorted.map(e=>`
+      <div class="rec"><div class="rec-top">
+        <div><div class="rec-badges" style="margin-bottom:4px;"><span class="badge oro">DÍA DE PARTIDO</span></div>
+          <div class="rec-date">${fmtDate(e.fecha)}</div>${e.desc?`<div class="rec-desc">${e.desc}</div>`:""}</div>
+        <div class="rec-badges"><span class="badge verde">+S/${PRECIO_PARTIDO}</span><button class="btn-danger" data-delext="${e.id}">Eliminar</button></div>
+      </div></div>`).join("");
+    list.querySelectorAll("[data-delext]").forEach(btn=>btn.addEventListener("click",()=>{ partidos=partidos.filter(e=>e.id!==btn.getAttribute("data-delext")); savePartidos(); render(); }));
+  }
+
+  function renderCasa(){
+    const list=$("casaList");
+    if(casa.length===0){ list.innerHTML='<div class="empty">Sin horas extra de casa registradas.</div>'; return; }
+    const sorted=[...casa].sort((a,b)=> b.fecha.localeCompare(a.fecha));
+    list.innerHTML = sorted.map(c=>{
+      const min=Number(c.horas)*60+Number(c.minutos);
+      return `<div class="rec"><div class="rec-top">
+        <div><div class="rec-badges" style="margin-bottom:4px;"><span class="badge morado">TRABAJO EN CASA</span></div>
+          <div class="rec-date">${fmtDate(c.fecha)}</div>${c.desc?`<div class="rec-desc">${c.desc}</div>`:""}</div>
+        <div class="rec-badges"><span class="badge morado">+${fmtHM(min)}</span><button class="btn-danger" data-delcasa="${c.id}">Eliminar</button></div>
+      </div></div>`;
+    }).join("");
+    list.querySelectorAll("[data-delcasa]").forEach(btn=>btn.addEventListener("click",()=>{ casa=casa.filter(c=>c.id!==btn.getAttribute("data-delcasa")); saveCasa(); render(); }));
+  }
+
+  async function loadAll(){
+    try{ const r=localStorage.getItem("horas-registros"); records = r?JSON.parse(r):[]; }catch(e){ records=[]; }
+    try{ const p=localStorage.getItem("horas-partidos"); partidos = p?JSON.parse(p):[]; }catch(e){ partidos=[]; }
+    try{ const c=localStorage.getItem("horas-casa"); casa = c?JSON.parse(c):[]; }catch(e){ casa=[]; }
+    try{ const pd=localStorage.getItem("horas-pendiente"); pendiente = pd?JSON.parse(pd):null; }catch(e){ pendiente=null; }
+    $("footerNote").textContent = "Guardado automáticamente en este navegador. Abre siempre este mismo archivo con el mismo navegador para ver tus datos.";
+    $("recFecha").value = todayISO();
+    render();
+  }
+  function saveRecords(){ try{ localStorage.setItem("horas-registros", JSON.stringify(records)); }catch(e){ $("footerNote").textContent="No se pudo guardar en este navegador."; } }
+  function savePartidos(){ try{ localStorage.setItem("horas-partidos", JSON.stringify(partidos)); }catch(e){ $("footerNote").textContent="No se pudo guardar en este navegador."; } }
+  function saveCasa(){ try{ localStorage.setItem("horas-casa", JSON.stringify(casa)); }catch(e){ $("footerNote").textContent="No se pudo guardar en este navegador."; } }
+  function savePendiente(){ try{ pendiente?localStorage.setItem("horas-pendiente", JSON.stringify(pendiente)):localStorage.removeItem("horas-pendiente"); }catch(e){ $("footerNote").textContent="No se pudo guardar en este navegador."; } }
+
+  ["recEntradaH"].forEach(id=>$(id).addEventListener("blur",()=>{ $(id).value=clampInt($(id).value,1,12,8); }));
+  ["recEntradaM"].forEach(id=>$(id).addEventListener("blur",()=>{ $(id).value=clampInt($(id).value,0,59,0); }));
+  $("recSalidaH").addEventListener("blur",()=>{ $("recSalidaH").value=clampInt($("recSalidaH").value,1,12,5); });
+  $("recSalidaM").addEventListener("blur",()=>{ $("recSalidaM").value=clampInt($("recSalidaM").value,0,59,0); });
+  ["retroEH","retroSH"].forEach(id=>$(id).addEventListener("blur",()=>{ $(id).value=clampInt($(id).value,1,12,8); }));
+  ["retroEM","retroSM"].forEach(id=>$(id).addEventListener("blur",()=>{ $(id).value=clampInt($(id).value,0,59,0); }));
+  $("casaHoras").addEventListener("blur",()=>{ $("casaHoras").value=clampInt($("casaHoras").value,0,12,0); });
+  $("casaMin").addEventListener("blur",()=>{ $("casaMin").value=clampInt($("casaMin").value,0,59,0); });
+
+  $("btnMarkEntrada").addEventListener("click", ()=>{
+    const fecha = $("recFecha").value || todayISO();
+    const h=clampInt($("recEntradaH").value,1,12,8), m=clampInt($("recEntradaM").value,0,59,0), ap=$("recEntradaAP").value;
+    pendiente = { fecha, entrada: to24(h,m,ap) };
+    savePendiente(); render();
+  });
+  $("btnCancelPending").addEventListener("click", ()=>{
+    if(confirm("¿Cancelar la entrada marcada? Se perderá.")){ pendiente=null; savePendiente(); render(); }
+  });
+  $("btnMarkSalida").addEventListener("click", ()=>{
+    const h=clampInt($("recSalidaH").value,1,12,5), m=clampInt($("recSalidaM").value,0,59,0), ap=$("recSalidaAP").value;
+    const salida = to24(h,m,ap);
+    records.push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), fecha: pendiente.fecha, entrada: pendiente.entrada, salida });
+    saveRecords();
+    pendiente = null; savePendiente();
+    $("recFecha").value = todayISO();
+    $("recEntradaH").value=8; $("recEntradaM").value=0; $("recEntradaAP").value="AM";
+    $("recSalidaH").value=5; $("recSalidaM").value=0; $("recSalidaAP").value="PM";
+    render();
+  });
+
+  $("toggleRetro").addEventListener("click", ()=>{
+    const el=$("retroForm");
+    el.style.display = el.style.display==="none" ? "block" : "none";
+  });
+  $("btnAddRetro").addEventListener("click", ()=>{
+    const fecha=$("retroFecha").value;
+    if(!fecha){ alert("Elige una fecha."); return; }
+    const eH=clampInt($("retroEH").value,1,12,8), eM=clampInt($("retroEM").value,0,59,0), eAP=$("retroEAP").value;
+    const sH=clampInt($("retroSH").value,1,12,5), sM=clampInt($("retroSM").value,0,59,0), sAP=$("retroSAP").value;
+    records.push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), fecha, entrada: to24(eH,eM,eAP), salida: to24(sH,sM,sAP) });
+    saveRecords();
+    $("retroFecha").value="";
+    render();
+  });
+
+  $("btnReset").addEventListener("click", ()=>{ if(confirm("¿Borrar todos los registros de oficina?")){ records=[]; saveRecords(); render(); } });
+
+  $("btnAddExt").addEventListener("click", ()=>{
+    const fecha=$("extFecha").value, desc=$("extDesc").value.trim();
+    if(!fecha){ alert("Elige una fecha."); return; }
+    partidos.push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), fecha, desc });
+    savePartidos();
+    $("extFecha").value=""; $("extDesc").value="";
+    render();
+  });
+  $("btnResetExt").addEventListener("click", ()=>{ if(confirm("¿Borrar todos los días de partido?")){ partidos=[]; savePartidos(); render(); } });
+
+  $("btnAddCasa").addEventListener("click", ()=>{
+    const fecha=$("casaFecha").value, desc=$("casaDesc").value.trim();
+    const horas=clampInt($("casaHoras").value,0,12,0), minutos=clampInt($("casaMin").value,0,59,0);
+    if(!fecha){ alert("Elige una fecha."); return; }
+    if(horas===0 && minutos===0){ alert("Pon una duración mayor a 0."); return; }
+    casa.push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), fecha, desc, horas, minutos });
+    saveCasa();
+    $("casaFecha").value=""; $("casaDesc").value=""; $("casaHoras").value=0; $("casaMin").value=0;
+    render();
+  });
+  $("btnResetCasa").addEventListener("click", ()=>{ if(confirm("¿Borrar todas las horas extra de casa?")){ casa=[]; saveCasa(); render(); } });
+
+  document.getElementById("filterChips").addEventListener("click",(e)=>{
+    const f=e.target.getAttribute("data-filter");
+    if(f){ filterMode=f; render(); return; }
+    if(e.target.id==="btnSort"){ sortDesc=!sortDesc; render(); }
+  });
+
+  loadAll();
+})();
+</script>
+</body>
+</html>
