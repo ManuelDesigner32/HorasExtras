@@ -355,32 +355,36 @@
     casa.forEach(c=>{ totalExtraCasa += Number(c.horas)*60+Number(c.minutos); });
 
     const totalExtra = totalExtraOficina + totalExtraCasa;
-    const compensado = Math.min(totalTardanza, totalExtra);
-    const pendienteMin = Math.max(0, totalTardanza-totalExtra);
-    const pagableMinRaw = Math.max(0, totalExtra-totalTardanza);
-    const pago = expand(pagableMinRaw);
-    const sueltosMin = pagableMinRaw - pago.minutos;
+    const netMin = totalExtra - totalTardanza;
+    const pendienteMin = Math.max(0, -netMin);
+    const pagableMinRaw = Math.max(0, netMin);
+    const pagoExtra = expand(pagableMinRaw);   // soles ganados por el neto de horas
+    const deudaTardanza = expand(pendienteMin); // soles que se restan por tardanza sin compensar
+    const sueltosMin = pagableMinRaw>0 ? (pagableMinRaw - pagoExtra.minutos) : (pendienteMin - deudaTardanza.minutos);
+    const netSoles = pagoExtra.soles - deudaTardanza.soles;
 
     const pagoPartidos = partidos.length * PRECIO_PARTIDO;
-    const totalSoles = pago.soles + pagoPartidos;
+    const totalSoles = netSoles + pagoPartidos;
 
-    $("soles").textContent = totalSoles.toFixed(2);
+    const solesEl = $("soles");
+    solesEl.textContent = (totalSoles<0?"-":"") + Math.abs(totalSoles).toFixed(2);
+    solesEl.style.color = totalSoles<0 ? "#E39A9A" : "";
     $("statTardanza").textContent = fmtHM(totalTardanza);
     $("statExtra").textContent = fmtHM(totalExtra);
     $("statExtraDesglose").textContent = `oficina ${fmtHM(totalExtraOficina)} + casa ${fmtHM(totalExtraCasa)}`;
-    $("statPendiente").textContent = fmtHM(pendienteMin);
+    $("statPendiente").textContent = fmtHM(pendienteMin) + (deudaTardanza.soles>0 ? " · -S/"+deudaTardanza.soles.toFixed(2) : "");
     $("statPartidos").textContent = `${partidos.length} · S/${pagoPartidos}`;
 
     const note = $("balanceNote");
-    const netMin = totalExtra - totalTardanza;
-    const netLabel = netMin>=0 ? (fmtHM(netMin)+" netas a tu favor") : (fmtHM(Math.abs(netMin))+" de tardanza sin compensar");
-    let resumen = `${fmtHM(totalExtra)} extra − ${fmtHM(totalTardanza)} tardanza = ${netLabel} → S/${pago.soles.toFixed(2)}`;
-    if(pagoPartidos>0) resumen += ` + S/${pagoPartidos} (${partidos.length} partido${partidos.length>1?'s':''}) = S/${totalSoles.toFixed(2)}`;
+    const netLabel = netMin>=0 ? (fmtHM(pagableMinRaw)+" netas a tu favor") : (fmtHM(pendienteMin)+" de tardanza sin compensar");
+    let resumen = `${fmtHM(totalExtra)} extra − ${fmtHM(totalTardanza)} tardanza = ${netLabel} → ${netSoles<0?"-":""}S/${Math.abs(netSoles).toFixed(2)}`;
+    if(pagoPartidos>0) resumen += ` + S/${pagoPartidos} (${partidos.length} partido${partidos.length>1?'s':''}) = ${totalSoles<0?"-":""}S/${Math.abs(totalSoles).toFixed(2)}`;
     let parts = [];
-    if(sueltosMin>0) parts.push(fmtHM(sueltosMin)+" sueltos sin pagar (no completan tramo)");
+    if(sueltosMin>0) parts.push(fmtHM(sueltosMin)+" sueltos sin contar (no completan tramo)");
     note.textContent = (records.length||casa.length||partidos.length) ? (resumen + (parts.length ? " — "+parts.join(" · ")+"." : "")) : "Sin registros todavía.";
 
     const total = totalTardanza+totalExtra;
+    const compensado = Math.min(totalTardanza, totalExtra);
     const wrap=$("compBarWrap"), bar=$("compBar");
     if(total>0){
       wrap.style.display="block";
